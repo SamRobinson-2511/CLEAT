@@ -28,9 +28,10 @@ s.makeGui;
 	env = EnvGen.kr(Env([0,1,0], [10, 10], [1, -1], doneAction: 2));
 	panSpeed = EnvGen.kr(Env([0.001, 1.25, 0.001], [10, 10], [1, 1]));
 	sig = PinkNoise.ar(0.4);
-	sig = PanAz.ar(16, sig, LFSaw.kr(panSpeed), 1, 1, 0.5);
+	sig = PanAz.ar(16, sig, LFSaw.kr(panSpeed), 1, mul, 0.5);
 	sig = sig * env;
 	Out.ar(0, sig);
 }.play;
 )
 
+{ LFSaw.kr(2, [0, 1, 2], -1) }.plot(0.1)
