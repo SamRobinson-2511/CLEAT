@@ -94,18 +94,18 @@ x.free;
 		\blip,
 		[
 			\out, ~reverbBus2,
-			\fund, exprand(60, 300).round(30)
+			\fund, exprand(60, 300).round(45)
 		],
 		~sourceGroup
 	);
 };
 )
-~sourceGroup.set([\decay, 0.1, \dens, 0.5]);
+~sourceGroup.set([\decay, 1.0, \dens, 55]);
 ~sourceGroup.free;
 ~fxGroup.free;
 
 
-s.reboot
+
 //NodeProxy
 
 a = NodeProxy.new.play; //play to hardware output
@@ -135,6 +135,114 @@ NodeProxy.defaultNumAudio;
 NodeProxy.defaultNumAudio = 16;
 
 
+
+
+//Group
+s.boot;
+g = Group.new; // add a group at the head of the default Server's default group
+h = Group.new(g, \addAfter);
+s.queryAllNodes;
+g.free; h.free;
+
+
+//Group.basicNew(server, nodeID)
+g = Group.basicNew(s);
+s.sendBundle(nil, g.newMsg);
+s.queryAllNodes;
+g.free;
+
+//Examples
+(
+SynthDef(\help_group_moto_rev, {
+	|out=0, freq=100, ffreq=120|
+	var x;
+	x = RLPF.ar(
+		LFPulse.ar(
+			SinOsc.kr(0.2, 0, 10, freq),
+			[0, 0.1],
+			0.1
+		),
+		ffreq, 0.1
+	).clip2(0.4);
+	Out.ar(out, x);
+}).add;
+
+SynthDef(\help_group_wah, {
+	|out, rate=1.5, cfreq=1400, mfreq=1200, rq=0.1|
+	var zin, zout, q;
+
+	zin = In.ar(out, 2);
+	cfreq = Lag3.kr(cfreq, 0.1);
+	mfreq = Lag3.kr(mfreq, 0.1);
+	q = Ramp.kr(rq, 0.1);
+	zout = RLPF.ar(zin, LFNoise1.kr(rate, mfreq, cfreq), q, 10).distort * 0.15;
+
+	//replace incoming bus with the effected version
+	ReplaceOut.ar(out, zout);
+}).add;
+)
+
+
+g = Group.new;
+
+(
+l = Array.fill(3, {
+	Synth(\help_group_moto_rev, ["out", 0, "freq", exprand(10, 1200)], g, \addToHead);
+});
+)
+g.set("ffreq", 300);
+g.set("freq", 80);
+
+(
+r = Routine({
+    inf.do({
+        l.do({ |node|
+            node.set("freq", rrand(10, 45));
+			node.set("ffreq", rrand(100, 200));
+            1.0.wait;
+        });
+    })
+});
+
+r.play;
+)
+
+g.group.inspect;
+x = Synth.after(g, \help_group_wah, ["out", 0]);
+g.dumpTree;
+x.free;
+l = nil;
+g.query;
+
+(
+3.do({
+	Synth(\help_group_moto_rev, ["out", 0, "freq", rrand(10, 1200)], g, \addToHead);
+})
+)
+(
+g.queryTree({
+	|msg|
+	var i = 1, tabs = 0, dumpFunc;
+	("NODE TREE Group" + msg[1]).postln;
+	if(msg[2] > 0, {
+		dumpFunc = { |numChildren|
+			tabs = tabs + 1;
+			numChildren.do({
+				i = i + 3;
+				tabs.do({ "   ".post });
+				msg[i].post;
+				(" " ++ msg[i + 2]).postln;
+				if(msg[i + 1] > 0, {
+					dumpFunc.value(msg[i + 1]) });
+			});
+			tabs = tabs - 1;
+		};
+		dumpFunc.value(msg[2]);
+	});
+});
+)
+g.free;
+g.query;
 
 
 
