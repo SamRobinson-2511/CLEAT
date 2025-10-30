@@ -67,6 +67,8 @@ x = Synth(\blip, [\out, ~reverbBus2]);
 s.freeAll;
 
 //Order of Execution
+
+
 //Default action is addToHead
 
 (
@@ -137,7 +139,7 @@ NodeProxy.defaultNumAudio = 16;
 
 
 
-//Group
+//Groups
 s.boot;
 g = Group.new; // add a group at the head of the default Server's default group
 h = Group.new(g, \addAfter);
@@ -243,6 +245,102 @@ g.queryTree({
 )
 g.free;
 g.query;
+
+//Order of execution
+//Groups
+(
+l = Bus.control(s, 1); //get a bus for the LFO, not relevant to order of execution
+b = Bus.audio(s, 2); //assuming this is stereo this is to keep the src->fx chain separate
+~synthGroup = Group.tail(s);
+~fxGroup = Group.tail(s);
+
+
+SynthDef(\order_of_ex_dist, {
+	|bus, preGain, postGain|
+	var sig;
+	sig = In.ar(bus, 2);
+	sig = (sig * preGain).distort;
+	ReplaceOut.ar(bus, sig * postGain);
+}).add;
+
+SynthDef(\order_of_ex_pulse, {
+	|freq, bus, ffreq, pan, lfobus|
+	var sig, noteLen;
+	noteLen = In.kr(lfobus, 1);
+	sig = RLPF.ar(Pulse.ar(freq, 0.2, 0.5), ffreq, 0.3);
+	Out.ar(bus, Pan2.ar(sig, pan) * EnvGen.kr(Env.perc(0.1, 1), timeScale: noteLen, doneAction: Done.freeSelf));
+}).add;
+
+SynthDef(\LFNoise1, {
+	|freq, mul, add, bus|
+	Out.kr(bus, LFNoise1.kr(freq, mul:mul, add:add));
+}).add;
+
+)
+(
+//Place LFO
+~lfo = Synth.head(s, \LFNoise1, [\freq, 0.3, \mul, 0.68, \add, 0.7, \bus, l]);
+
+//then place effect
+~dist = Synth.tail(~fxGroup, \order_of_ex_dist, [\bus, b, \preGain, 8, \postGain, 0.6]);
+
+//tranfer the results to main out with level scaling, play at tail of s's default group
+~xfer = { Out.ar(0, 0.25 * In.ar(b, 2))}.play(s, addAction: \addToTail);
+)
+
+//start routine
+(
+r = Routine({
+	{
+		Synth.tail(~synthGroup, \order_of_ex_pulse,
+			[
+				\freq, rrand(200, 800),
+				\ffreq, rrand(1000, 15000),
+				\pan, 1.0.rand2,
+				\bus, b,
+				\lfobus, l
+			]);
+		0.07.wait;
+	}.loop;
+}).play(SystemClock);
+)
+r.stop;
+
+~dist.run(false);
+~dist.run(true);
+
+(
+r.stop;
+[~synthGroup, ~fxGroup, b, l, ~lfo, ~xfer].do({|x| x.free });
+currentEnvironment.clear;
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
