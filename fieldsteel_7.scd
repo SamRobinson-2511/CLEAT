@@ -295,7 +295,7 @@ r = Routine({
 		Synth.tail(~synthGroup, \order_of_ex_pulse,
 			[
 				\freq, rrand(200, 800),
-				\ffreq, rrand(1000, 15000),
+				\ffreq, rrand(1000, 1500),
 				\pan, 1.0.rand2,
 				\bus, b,
 				\lfobus, l
