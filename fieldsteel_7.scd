@@ -279,10 +279,10 @@ SynthDef(\LFNoise1, {
 )
 (
 //Place LFO
-~lfo = Synth.head(s, \LFNoise1, [\freq, 0.3, \mul, 0.68, \add, 0.7, \bus, l]);
+~lfo = Synth.head(s, \LFNoise1, [\freq, rrand(3,20), \mul, 0.68, \add, 0.7, \bus, l]);
 
 //then place effect
-~dist = Synth.tail(~fxGroup, \order_of_ex_dist, [\bus, b, \preGain, 8, \postGain, 0.6]);
+~dist = Synth.tail(~fxGroup, \order_of_ex_dist, [\bus, b, \preGain, 8, \postGain, 0.06]);
 
 //tranfer the results to main out with level scaling, play at tail of s's default group
 ~xfer = { Out.ar(0, 0.25 * In.ar(b, 2))}.play(s, addAction: \addToTail);
@@ -316,11 +316,114 @@ currentEnvironment.clear;
 )
 
 
+//Dictionary
+d = Dictionary();
+d.put(\a, 440);
+d.keys;
+d.put(\a, nil);
+d.keys;
 
 
+//Dictionary.newFrom(aCollection);
+d = Dictionary.newFrom([\a, 1, \b, 2, \c, 4]);
 
 
+//Dictionary from an array of associations
+Dictionary.with(*[\a->1, \b->2, \c->3]);
 
+//Dictionary from a single association
+d = Dictionary[\a -> 1];
+
+//Dictionary.add(anAssociation)
+(
+d = Dictionary.new;
+d.add(\monkey -> 0).postln;
+d.add(\robot -> 1).postln;
+d.add(\monkey -> 2).postln;
+)
+
+//Routine
+a = Routine.new({ 1.yield; 2.yield });
+a.next.postln;
+a.next.postln;
+a.next.postln;
+
+//function class provides its own shortcut method
+a = r { 1.yield; 2.yield };
+a.next;
+a.next;
+a.next;
+a.reset;
+
+(
+r = Routine {
+	|inval|
+	inval.postln;
+	inval = 123.yield;
+	inval.postln;
+}
+)
+r.value("hello routine");
+r.value("goodbye routine");
+
+(
+r = Routine {
+	|inval|
+	inval.postln; //post value passed in when started
+	5.do {
+		|i|
+		inval = (i + 10).yield;
+		inval.postln; //post the value passed in when resumed
+	}
+
+}
+)
+(
+5.do {
+	r.value("hello routine").postln; //post the value that the Routine yields
+
+}
+)
+
+//Routine.play(clock, quant);
+(
+r = Routine {
+	199.yield;
+	189.yield;
+	200.idle(6);
+	199.yield;
+	189.yield;
+};
+
+fork {
+	loop {
+		r.value.postln;
+		1.wait;
+	}
+}
+)
+r.stop;
+
+//the value can also be a stream or a function
+(
+r = Routine {
+	199.yield;
+	189.yield;
+	Routine { 100.do {
+		|i|
+		i.yield;
+	}}.idle(100);
+	199.yield;
+	189.yield;
+};
+
+fork {
+	loop {
+		r.value.postln;
+		1.wait;
+	}
+}
+)
 
 
 
