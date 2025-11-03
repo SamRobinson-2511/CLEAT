@@ -165,10 +165,117 @@ Pdefn(\degree, (Pexprand(1, 8, inf) -1).round);
 Pdefn(\dur, Pwrand(#[0.25, 0.5, 0.75], #[0.5, 0.3, 0.2], inf));
 p.stop;
 
+//Pattern Guide Cookbook 03: External Control
+
+//Triggering a pattern by a GUI
+s.reboot;
+(
+var    pattern = Pbind(
+        \degree, Pseries(7, Pwhite(1, 3, inf) * Prand(#[-1, 1], inf), inf).fold(0, 14)
+            + Prand(#[[0, -2, -4], [0, -3, -5], [0, -2, -5], [0, -1, -4]], inf),
+        \dur, Pwrand(#[1, 0.5], #[0.8, 0.2], inf)
+    ),
+    player, window;
+
+window = Window.new("Pattern trigger", Rect(5, 100, 150, 100))
+        // onClose is fairly important
+        // without it, closing the window could leave the pattern playing
+    .onClose_({ player.stop });
+Button.new(window, Rect(5, 5, 140, 90))
+    .states_([["Pattern GO"], ["Pattern STOP"]])
+    .font_(Font.new("Helvetica", 18))
+    .action_({ |button|
+        if(button.value == 1 and: { player.isNil or: { player.isPlaying.not } }) {
+            player = pattern.play;
+        } {
+            player.stop;
+            button.value = 0;
+        };
+    });
+window.front;
+)
+
+p.stop;
 
 
+//Triggering a Pattern by MIDI
+(
+var    pattern = Pbind(
+        \degree, Pseries(7, Pwhite(1, 3, inf) * Prand(#[-1, 1], inf), inf).fold(0, 14)
+            + Prand(#[[0, -2, -4], [0, -3, -5], [0, -2, -5], [0, -1, -4]], inf),
+        \dur, Pwrand(#[1, 0.5], #[0.8, 0.2], inf)
+    ),
+    player;
 
+~noteOnFunc = MIDIFunc.noteOn({
+    if(player.isNil or: { player.isPlaying.not }) {
+        player = pattern.play;
+    } {
+        player.stop;
+    };
+// 60 limits this MIDIFunc to listen to middle-C only
+// but it will pick up that note from any port, any channel
+}, 60);
+)
 
+// when done
+~noteOnFunc.free;
+
+//Triggering a pattern by signal amplitude
+//inbus: s.options.numOutputBusChannels
+
+/*(
+var amp = Amplitude.kr(In.ar(inbus, 1), attackTime: 0.01, releaseTime: decay), trig = HPZ1.kr(amp >= thresh);
+SendTrig.kr(trig.abs, 1, trig);
+)*/
+
+s.reboot;
+(
+var pattern = Pbind(
+	\degree, Pseries(7, Pwhite(1, 3, inf) * Prand(#[-1, 1], inf), inf).fold(0, 14)
+	+ Prand(#[[0, -2, -4], [0, -3, -5], [0, -2, -5], [0, -1, -4]], inf),
+	\dur, Pwrand(#[1, 0.5], [0.8, 0.2], inf)
+),
+player;
+
+~w = Window(\Threshold_setting, Rect(15, 100, 300, 100))
+.onClose_({
+	~ampSynth.free;
+	~ampUpdater.free;
+	~oscTrigResp.free;
+	player.stop;
+});
+~w.view.decorator = FlowLayout(~w.view.bounds, 2@2, 2@2);
+~ampView = EZSlider(~w, 295@20, "amplitude", \amp, labelWidth: 80, numberWidth: 60);
+~ampView.sliderView.canFocus_(false).enabled_(false);
+~ampView.numberView.canFocus_(false).enabled_(false);
+~threshView = EZSlider(~w, 295@30, "threshold", \amp, action: {
+	|ez|
+	~ampSynth.set(\thresh, ez.value);
+}, initVal: 0.4, labelWidth: 80, numberWidth: 60);
+~decayView = EZSlider(~w, 295@30, "decay", #[0.1, 100, \exp], action: {
+	|ez|
+	~ampSynth.set(\decay, ez.value);
+}, initVal: 80.0, labelWidth: 80, numberWidth: 60);
+
+~w.front;
+
+~ampSynth = SynthDef(\ampSynth, {
+	|inbus, thresh = 0.8, decay = 1|
+	var amp = Amplitude.kr(In.ar(inbus, 1), attackTime: 0.01, releaseTime: decay);
+	SendReply.kr(Impulse.kr(10), '\amp', amp);
+	SendReply.kr(amp >= thresh, '\amptrig');
+}).play(args: [inbus: s.options.numOutputBusChannels, thresh: ~threshView.value, decay: ~decayView.value]);
+
+~ampUpdater = OSCFunc({
+	|msg|
+	if(player.isNil or: { player.isPlaying.not }) {
+		player = pattern.play;
+	} {
+		player.stop;
+	};
+}, '\amptrig', s.addr)
+)
 
 
 
