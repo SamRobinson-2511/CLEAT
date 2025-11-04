@@ -462,10 +462,80 @@ Pfsm([
 ]).play;
 )
 
-//Pdfsm: deterministic finite state machine
+///////////Pdfsm: deterministic finite state machine
+
+///////////////////////Library of named sub-patterns
+//Dictionary of sub-patterns
+//Psym
+
+(
+~phrases = (
+	repeated: Pbind(
+		\instrument, \bass,
+		\midinote, 36,
+		\dur, Pseq([0.75, 0.25, 0.25, 0.25, 0.5], 1),
+		\dur, Pseq([0.9, 0.3, 0.3, 0.3, 0.3], 1),
+		\amp, 0.5,
+		\detune, 1.005
+	),
+	octave: Pmono(\bass,
+		\midinote, Pseq([36, 48, 36], 1),
+		\dur, Pseq([0.25, 0.25, 0.5], 1),
+		\amp, 0.5,
+		\detune, 1.005
+	),
+	tritone: Pmono(\bass,
+		\midinote, Pseq([36, 42, 41, 33], 1),
+		\dur, Pseq([0.25, 0.25, 0.25, 0.75], 1),
+		\amp, 0.5,
+		\detune, 1.005
+	),
+	dim: Pmono(\bass,
+		\midinote, Pseq([36, 39, 36, 42], 1),
+		\dur, Pseq([0.25, 0.5, 0.25, 0.5], 1),
+		\amp, 0.5,
+		\detune, 1.005
+	)
+);
+
+
+TempoClock.default.tempo = 128/60;
+
+p = Psym(Pxrand(#[repeated, octave, tritone, dim], inf), ~phrases).play;
+)
+p.stop;
+
+//Switching between patterns for individual values
+
+(
+TempoClock.default.tempo = 1;
+p = Pbind(
+	\degree, Pswitch1([Pwhite(7, 14, inf), Pwhite(-7, 0, inf)], Pfunc {0.7.coin.binaryValue }),
+	\dur, 0.25
+).play;
+)
+p.stop;
+
+//versus
+
+(
+p = Pbind(
+	\degree, Pswitch([Pwhite(7, 14,inf), Pwhite(-7, 0, inf)], Pfunc{ 0.7.coin.binaryValue}),
+	\dur, 0.25
+).play
+)
+p.stop;
 
 
 
+//Conditional Patterns
+(
+TempoClock.default.tempo = 1;
+p = Pbind(
+	\degree, Pif(Pwhite(0.0, 1.0, inf) < 0.7, Pwhite(-7, 0, inf), Pwhite(7, 14, inf)),
+	\dur, 0.25
+).play;
+)
 
 ///////////////////////////////////////////////////////////Pattern Guide Cookbook 01: Basic Sequencing
 
@@ -503,7 +573,7 @@ p = Pbind(
 )
 
 
-//"Multichannel expansion"
+////////////////////////////"Multichannel expansion"
 (
 (
 p = Pbind(
@@ -522,8 +592,7 @@ p = Pbind(
 )
 p.stop;
 
-//Using custom SynthDefs
-
+//////////////////////////////Using custom SynthDefs
 (
 b = Buffer.read(s, ExampleFiles.child);
 )
