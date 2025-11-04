@@ -325,10 +325,25 @@ p = Pmono(\trig_demo,
 )
 p.stop;
 
+//Pattern Guide 04: Words to Phrases
+//Patterns within list patterns (Pseq, Prand)
 
+//scale segments in the sequence (up, up, down, repeat)
+(
+TempoClock.default.tempo=1;
+p = Pbind(
+	\degree, Pseq([
+		Pseries({ rrand(0, 7)}, 1, { rrand(4, 8) }),
+		Pseries({ rrand(0, 7)}, 1, { rrand(4, 8) }),
+		Pseries({ rrand(7, 14) }, -1, { rrand(4, 8)})
+	], inf),
+	\dur, 0.125
+).play;
+)
 
-
-
+p.play(2);
+p.stop;
+s.killAll;
 
 
 

@@ -16,10 +16,11 @@ s.meter;
 Synth(\test0);
 
 //Buffer allocation
-(
+
 ~s1 = Buffer.read(s, "/Users/robinson.will.sam/Desktop/taste_rubber_test/02-251013_2314.wav" );
 ~s2 = Buffer.read(s, "/Users/robinson.will.sam/Desktop/taste_rubber_test/02-251016_0143.wav");
-)
+
+
 (
 ~s1.numChannels =1;
 ~s1.numChannels;
@@ -31,14 +32,15 @@ Synth(\test0);
 (
 SynthDef(\sampler, {
 	|buf=0, atk, sus, rel, amp|
-	var sig;
+	var sig, env;
 	sig = BufRd.ar(1!2, buf, Line.ar(0, BufFrames.ir(buf)-1, BufDur.ir(buf)));
+	env = EnvGen.kr([0, 1, 1, 0])
 	Out.ar(0, sig!2);
 }).add;
 )
 
 (
-Synth(\sampler, [buf: ~s2]);
+Synth(\sampler, [buf: ~s2, atk: 0.05]);
 )
-
+s.reboot;
 s.meter;

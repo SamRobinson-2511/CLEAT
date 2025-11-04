@@ -1,3 +1,5 @@
+s.boot;
+
 //Routine
 a = Routine.new({ 1.yield; 2.yield });
 a.next.postln;
@@ -116,10 +118,12 @@ t.reschedule(quant: 1);
 t.stop;
 
 //Fieldsteel: Routines and Clocks
-
-~kick = Buffer.read(s, "/Users/robinson.will.sam/Desktop/taste_rubber_test/02-251013_2314.wav" );
-~snare = Buffer.read(s, "/Users/robinson.will.sam/Desktop/taste_rubber_test/02-251016_0143.wav");
-
+(
+~s1 = Buffer.read(s, "/Users/robinson.will.sam/Desktop/taste_rubber_test/02-251013_2314.wav" );
+~s2 = Buffer.read(s, "/Users/robinson.will.sam/Desktop/taste_rubber_test/02-251016_0143.wav");
+)
+~s1.numChannels = 1;
+~s2.numChannels = 1;
 (
 SynthDef(\sine, {
 	var sig;
@@ -149,23 +153,23 @@ SynthDef(\sampler, {
 
 (
 Synth(\sampler, [
-	buf: [~kick, ~snare],
+	buf: [~s1, ~s2],
 	atk: 2,
-	sus: 10000,
-	rel: 10000,
-	lpf: rrand(5000, 7000).round(45),
+	sus: 10,
+	rel: 100,
+	lpf: rrand(45, 9000).round(45).postln,
 	hpf: rrand(1500, 20000),
-	rate: exprand(1, 200.5),
-	amp: 0.1
+	rate: exprand(100, 1000).postln,
+	amp: 0.5
 ]);
 )
 
 //Routine
 (
 f = {
-	Synth(\sampler, [buf: ~kick, atk: rrand(0.1, 2.0), sus:20, rel: 40, rate: 20.33.midiratio, amp: 0.5, lpf: 50]);
-	Synth(\sampler, [buf: ~snare, atk: rrand(0.1, 4.0), sus:20, rel: 4, rate: 61.midiratio, amp: 0.1, lpf: 350, pan: rrand(-1, 1)]);
-	Synth(\sampler, [buf: ~kick, atk: rrand(0.1,0.6), sus:20, rel: 4, rate: 62.midiratio, amp: 0.1, lpf: 1200]);
+	Synth(\sampler, [buf: ~s1, atk: rrand(0.1, 2.0), sus:20, rel: 40, rate: 20.33.midiratio, amp: 0.5, lpf: 50]);
+	Synth(\sampler, [buf: ~s2, atk: rrand(0.1, 4.0), sus:20, rel: 4, rate: 61.midiratio, amp: 0.1, lpf: 350, pan: rrand(-1, 1)]);
+	Synth(\sampler, [buf: ~s1, atk: rrand(0.1,0.6), sus:20, rel: 4, rate: 62.midiratio, amp: 0.1, lpf: 1200]);
 };
 )
 f.();
@@ -191,11 +195,11 @@ r.play;
 
 (
 f = {
-	Synth(\sampler, [buf: ~kick, atk: rrand(0.1, 2.0), sus:20, rel: 40, rate: 20.33.midiratio, amp: 0.5, lpf: 50]);
+	Synth(\sampler, [buf: ~s1, atk: rrand(0.1, 2.0), sus:20, rel: 40, rate: 20.33.midiratio, amp: 0.5, lpf: 50]);
 	1.yield;
-	Synth(\sampler, [buf: ~snare, atk: rrand(0.1, 4.0), sus:20, rel: 4, rate: 61.midiratio, amp: 0.1, lpf: 350, pan: rrand(-1, 1)]);
+	Synth(\sampler, [buf: ~s2, atk: rrand(0.1, 4.0), sus:20, rel: 4, rate: 61.midiratio, amp: 0.1, lpf: 350, pan: rrand(-1, 1)]);
 	1.yield;
-	Synth(\sampler, [buf: ~kick, atk: rrand(0.1,0.6), sus:20, rel: 4, rate: 62.midiratio, amp: 0.1, lpf: 1200]);
+	Synth(\sampler, [buf: ~s1, atk: rrand(0.1,0.6), sus:20, rel: 4, rate: 62.midiratio, amp: 0.1, lpf: 1200]);
 	1.yield;
 };
 )
@@ -209,8 +213,20 @@ r.next;
 r.next;
 
 
+//With arrays
+(
+f = {
+	[-30, -23, -20, -16].collect({
+		|rate|
+		Synth(\sampler, [buf: ~s1, atk: 0.2, rate: rate.midiratio, amp: 0.5]);
+		0.1.yield;
+	});
+};
 
-
+r = Routine(f);
+)
+r.next;
+r.reset;
 
 
 
