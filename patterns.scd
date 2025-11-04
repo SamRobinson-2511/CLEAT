@@ -1,5 +1,5 @@
 //Pattern Guide 01: Introduction
-
+s.boot;
 (
 a = Routine {
 	var i = 0;
@@ -344,51 +344,130 @@ p = Pbind(
 p.play;
 p.stop;
 
+
 (
-SynthDef(\bass, {
-	|out, freq=440, gate=1, amp=0.5, slideTime=0.17, ffreq=1100, width=0.15, detune=1.005, preamp=4|
-	var sig,
-	env = Env.adsr(0.01, 0.3, 0.4, 0.1);
-	freq = Lag.kr(freq, slideTime);
-	sig = Mix(VarSaw.ar([freq, freq*detune], 0, width, preamp)).distort * amp * EnvGen.kr(env, gate, doneAction: Done.freeSelf);
-	sig = LPF.ar(out, sig ! 2)
+SynthDef(\bass, { |out, freq = 440, gate = 1, amp = 0.5, slideTime = 0.17, ffreq = 1100, width = 0.15,
+        detune = 1.005, preamp = 4|
+    var    sig,
+        env = Env.adsr(0.01, 0.3, 0.4, 0.1);
+    freq = Lag.kr(freq, slideTime);
+    sig = Mix(VarSaw.ar([freq, freq * detune], 0, width, preamp)).distort * amp
+        * EnvGen.kr(env, gate, doneAction: Done.freeSelf);
+    sig = LPF.ar(sig, ffreq);
+    Out.ar(out, sig ! 2)
 }).add;
 )
-s.reboot;
+
 (
 TempoClock.default.tempo = 132/60;
 p = Pxrand([
-	Pbind(
-		\instrument, \bass,
-		\midinote, 36,
-		\dur, Pseq([0.75, 0.25, 0.25, 0.25, 0.5],1),
-		\legato, Pseq([0.9, 0.3, 0.3, 0.3, 0.3], 1),
-		\amp, 0.5,
-		\detune, 1.005
-	),
-	Pmono(\bass,
-		\midinote, Pseq([36, 48, 36], 1),
-		\dur, Pseq([0.25, 0.25, 0.25, 0.75], 1),
-		\amp, 0.5,
-		\detune, 1.005
-	),
-	Pmono(\bass,
-		\midinote, Pseq([36, 42, 41, 33], 1),
-		\dur, Pseq([0.25, 0.25, 0.25, 0.75], 1),
-		\amp, 0.5,
-		\detune, 1.005
-	),
-	Pmono(\bass,
-		\midinote, Pseq([36, 39, 36, 42], 1),
-		\dur, Pseq([0.25, 0.25, 0.25, 0.75], 1),
-		\amp, 0.5,
-		\detune, 1.005
-	)
+    Pbind(            // repeated notes
+        \instrument, \bass,
+        \midinote, 36,
+        \dur, Pseq([0.75, 0.25, 0.25, 0.25, 0.5], 1),
+        \legato, Pseq([0.9, 0.3, 0.3, 0.3, 0.3], 1),
+        \amp, 0.5, \detune, 1.005
+    ),
+    Pmono(\bass,        // octave jump
+        \midinote, Pseq([36, 48, 36], 1),
+        \dur, Pseq([0.25, 0.25, 0.5], 1),
+        \amp, 0.5, \detune, 1.005
+    ),
+    Pmono(\bass,        // tritone jump
+        \midinote, Pseq([36, 42, 41, 33], 1),
+        \dur, Pseq([0.25, 0.25, 0.25, 0.75], 1),
+        \amp, 0.5, \detune, 1.005
+    ),
+    Pmono(\bass,        // diminished triad
+        \midinote, Pseq([36, 39, 36, 42], 1),
+        \dur, Pseq([0.25, 0.5, 0.25, 0.5], 1),
+        \amp, 0.5, \detune, 1.005
+    )
 ], inf).play(quant: 1);
 )
+p.stop;
+
+//Some ways to string patterns together
+//Sequentially
+//Randomized order
+//Direct Array indexing
+(
+var    n = 10,
+    scaleSegments = Array.fill(n, { |i|
+        if(i.odd) {
+            Pseries(11, -1, rrand(5, 10))
+        } {
+            Pseries(rrand(-4, 4), 1, i+2)
+        }
+    });
+
+TempoClock.default.tempo = 1;
+p = Pbind(
+    \degree, Pswitch(scaleSegments, Pseq([Pwhite(0, n-1, 4), Pwhite(0, n-1, 1).select(_.odd)], inf)),
+    \dur, 0.125
+).play;
+)
+
+p.stop;
+
+//Finite State Machine: a way of associating an item with its possible successors
+//Pfsm: Markov chain
+//Every state consists of an item and an array of integer indices of possible next states
+
+(
+SynthDef(\help_sinegrain, {
+	|out = 0, freq = 440, sustain = 0.05|
+	var env;
+	env = EnvGen.kr(Env.perc(0.02, sustain, 0.2), doneAction: Done.freeSelf);
+	Out.ar(out, SinOsc.ar(freq, 0, env))
+}).add;
+)
+(
+a = Pfsm([
+	#[0,1],
+	67, #[0, 0, 3],
+	72, #[2],
+	73, #[0,2],
+	Pseq([74, 75, 76, 77]), #[2,3,3],
+], inf).asStream;
+Routine({
+	loop({
+		Synth(\help_sinegrain, [\freq, a.next.midicps]);
+		0.1.wait;
+	})
+}).play;
+)
+
+(
+Pfsm([
+	//e1 (== state 0)
+	#[5, 6, 7], //entry states
+	Pbind(\dur, Pseq([1/8, 3/8]), \midinote, Pseq([86, 75])),
+	#[1, 1, 1, 1, 1, 1, 1, 8],
+	Pbind(\dur, 1/2, \midinote, Pseq([69])),
+	#[0, 1],
+	Pbind(\dur, 1/3, \midinote, Pseq([55, 60, 66])),
+	#[0, 1, 2, 2, 2, 2, 3, 3, 3, 3],
+	Pbind(\dur, 1/4, \midinote, Pseq([81, 80, 77, 76])),
+	#[1, 4, 4, 4, 4],
+	Pbind(\dur, Pseq([1, 2/3, 2/3, 2/3, 1]), \midinote, Pseq([\, 70, 70, 70, \])),
+	#[2,3],
+	Pbind(\dur, 1/4, \midinote, Pseq([59, 61])),
+	#[0, 2, 4, 5, 5, 5, 5, 5, 5, 5],
+	Pbind(\dur, 1/4, \midinote, Pseq([87, 88], 2)),
+	#[4, 4, 4, 4, 6, 6, 6, 7, 7, 7],
+	Pbind(\dur, 1, \midinote, Pseq([56])),
+	#[1, 3, 6, 6, 6],
+	nil, nil
+]).play;
+)
+
+//Pdfsm: deterministic finite state machine
 
 
-//Pattern Guide Cookbook 01: Basic Sequencing
+
+
+///////////////////////////////////////////////////////////Pattern Guide Cookbook 01: Basic Sequencing
 
 (
 TempoClock.default.tempo = 84/60;
