@@ -230,7 +230,140 @@ p = Pbind(
 )
 p.next(());
 
-//Pmono
+//Pmono: monophonic
+(
+p = Pbind(
+	\degree, Pwhite(0, 7, inf),
+	\dur, 0.25,
+	\legato, 1
+).play;
+)
+p.stop;
+
+(
+p = Pmono(
+	\default,
+	\degree, Pwhite(0, 7, inf),
+	\dur, 0.25
+).play;
+)
+p.stop;
+
+//Connecting event values to SynthDef inputs
+(
+SynthDef(\default, {
+	|out=0, freq=440, amp=0.1, pan=0, gate=1|
+	var z;
+	z = LPF.ar(
+		Mix(VarSaw.ar(freq + [0, Rand(-0.4, 0.0), Rand(0.0, 0.4)], 0, 0.3)),
+		XLine.kr(Rand(4000, 5000), Rand(2500, 3200), 1)
+	) * Linen.kr(gate, 0.01, 0.7, 0.3, 2);
+	OffsetOut.ar(out, Pan2.ar(z, pan, amp));
+}, [\ir]);
+)
+
+(freq: 293.3333, amp:0.2, pan: -0.7).play;
+(freq: 440, amp:0.1, pan:0.7).play;
+
+//THE NAMES THAT YOU USE FOR PATTERNS IN PBIND SHOULD CORRESPOND TO THE ARGUMENTS IN THE SYNTHDEF BEING PLAYED
+
+(
+SynthDef(\harpsi, {
+	|outbus = 0, freq=440, amp=0.1, gate=1|
+	var out;
+	out = EnvGen.ar(Env.adsr, gate, doneAction: Done.freeSelf) * amp * Pulse.ar(freq, 0.25, 0.75);
+	Out.ar(outbus, out ! 2);
+}).add;
+)
+
+(
+p = Pbind(
+	\instrument, \harpsi,
+	\degree, Pseries(0, 1, 8),
+	\dur, 0.25
+).play;
+)
+
+//Rest events
+//Ligeti, 'touches bloquees'(
+(
+// first, pitches ascending by 1-3 semitones, until 2 octaves are reached
+var    pitches = Pseries(0, Pconst(24, Pwhite(1, 3, inf)), inf).asStream.all,
+        // randomly block 1/3 of those
+    mask = pitches.scramble[0 .. pitches.size div: 3];
+
+p = Pbind(
+    \arpeg, Pseq(pitches[ .. pitches.size - 2] ++ pitches.reverse[ .. pitches.size - 2], inf),
+        // if the note is found in the mask array, replace it with Rest
+        // then that note does not sound
+    \note, Pif(Pfunc { |event| mask.includes(event[\arpeg]) }, Rest(0), Pkey(\arpeg)),
+    \octave, 4,
+    \dur, 0.125
+).play;
+)
+p.stop;
+
+//Writing SynthDefs for Patterns
+//1. Synths should release themeselves
+//2. Argument name prefixes
+
+(
+SynthDef(\trig_demo, {
+	|out, freq=440, gate=1, t_trig=1|
+	var env = Decay2.kr(t_trig, 0.01, 0.1),
+	sig = SinOsc.ar(freq, 0, env) * Linen.kr(gate, 0.01, 0.1, 0.1, doneAction: Done.freeSelf);
+	Out.ar(out, sig ! 2)
+}).add;
+)
+
+(
+p = Pmono(\trig_demo,
+	\freq, Pexprand(200, 800, inf),
+	\trig, 1,
+	\delta, 0.125
+).play;
+)
+p.stop;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
