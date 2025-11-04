@@ -536,8 +536,28 @@ p = Pbind(
 	\dur, 0.25
 ).play;
 )
+p.stop;
 
-///////////////////////////////////////////////////////////Pattern Guide Cookbook 01: Basic Sequencing
+//Pattern Guide 05: Math on Patterns
+p = Pwhite(1, 5, inf) * 2;
+p.operator;
+p.a;
+p.b;
+
+//Math on Patterns
+//Random integers 1-5
+Pwhite(1, 5, inf).asStream.nextN(10);
+
+//Random integers 1-5 multiplied by two gives even integers 2 - 10
+(Pwhite(1, 5, inf)*2).asStream.nextN(10);
+
+//Random integers 1-5, multiplied by 1/4 gives multiples of `1/4 between 0.25 and 1.25
+(Pwhite(1, 5, inf)*0.25).asStream.nextN(10)
+
+//Random integers 1-5 with the sign (positive or negative) randomly chosen
+(Pwhite(1, 5, inf)* Prand(#[-1, 1], inf)).asStream.nextN(10);
+
+///////////////////////////////////////////////////////////////////////////Pattern Guide Cookbook 01: Basic Sequencing
 
 (
 TempoClock.default.tempo = 84/60;
