@@ -1,3 +1,272 @@
+//Pattern Guide 01: Introduction
+
+(
+a = Routine {
+	var i = 0;
+	loop {
+		i.yield;
+		i = i + 1;
+	};
+};
+a.nextN(10);
+)
+
+//simplified control structure
+(
+a = Routine {
+	(0..).do{
+		|i|
+		i.yield;
+	};
+};
+a.nextN(10);
+)
+
+//Pseries
+(
+a = Pseries(start: 0, step:1, length: inf).asStream;
+a.nextN(10);
+)
+
+(
+p = Pseries(0, 1, 10);
+q = p.asStream;
+)
+
+
+r = p.asStream;
+r.next;
+
+
+[q.next, r.next]
+
+//Pattern Guide 02: Basic Vocabulary
+
+//Functional Description of Patterns
+//List Patterns
+
+Pseq(#[1,2,3],4).asStream.all;
+(
+p = Pbind(
+	\degree, Pseq(#[0, 0, 4, 4, 5, 5, 4], 1),
+	\dur, Pseq(#[0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1], 1)
+).play;
+)
+
+Pser(#[1,2,3],4).asStream.all;
+
+Pslide(#[1, 2, 3, 4, 5, 6, 7, 8], 10, 3, 1, 0, false).asStream.all;
+
+Pslide(#[1, 2, 3, 4, 5, 6, 7, 8], 10, 3, 1, 0, false).clump(3).asStream.all;
+
+(
+p = Pbind(
+	\degree, Pslide((-6, -4 .. 12), 8, 3, 1, 0),
+	\dur, Pseq(#[0.1, 0.1, 0.2], inf),
+	\sustain, 0.15
+).play;
+)
+
+
+//Random Order List Patterns
+
+//Prand = equal distribution
+(
+p = Pbind(
+	\degree, Prand([0, 1, 2, 4, 5], inf),
+	\dur, 0.25
+).play;
+)
+
+//Pxrand = never repeats 2x in a row
+(
+p = Pbind(
+	\degree, Pxrand([0, 1, 2, 4, 5], inf),
+	\dur, 0.25
+).play;
+)
+
+//Pshuf = shufflethe list in random order and use the same random order repeats times (list.scramble)
+
+
+
+(
+p = Pbind(
+	\degree, Pshuf([0, 1, 2, 4, 5], inf),
+	\dur, 0.25
+).play;
+)
+
+//Pwrand = choose randomly according to weighted probabilities (list.wchoose(weights))
+
+(
+p = Pbind(
+	\degree, Pwrand((0..7), [4, 1, 3, 1, 3, 2, 1].normalizeSum, inf),
+	\dur, 0.25
+).play;
+)
+
+//Pwalk = random walk over the list
+(
+a = Pwalk(
+	Array.series(20, 0, 1),
+	Pwrand([-2, -1, 0, 1, 2], [0.05, 0.1, 0.15, 1, 0.1].normalizeSum, inf),
+	Pseq([1, -1], inf),
+	10);
+x = a.asStream;
+
+200.do({ x.next.post; ", ".post });
+
+b = a.copy.directionPattern_(1);
+x = b.asStream;
+
+200.do({ x.next.post; ", " });
+)
+(
+a = Pwalk(
+	[60, 64, 67, 72, 76, 79, 84].midicps,
+	Pseq([1], inf),
+	Pseq([1, -1], inf),
+	0);
+x = a.asStream;
+SynthDef(\help_walk, {
+	|out, freq|
+	Out.ar(out, Saw.ar([freq, freq+1], 0.5) *
+		EnvGen.kr(Env.perc(0.01, 0.1), doneAction: Done.freeSelf))
+}).add;
+)
+
+s.reboot;
+(
+r = Task({
+	{
+		Synth(\help_walk, [\freq, x.next]);
+		0.1.wait;
+	}.loop;
+}).play(SystemClock);
+)
+
+r.stop;
+
+
+//Interlacing Values and Making Arrays
+//Place
+(
+Place([0, [1, 2], [3, 4, 5]], 3).asStream.all;
+)
+
+(
+Place([0, [1,2], [3,4,5]], 3).clump(3).do(_.postln);
+)
+
+//Ppatlace(list, repeats, offset)
+//Hanon exercise
+(
+p = Pbind(
+	\degree, Ppatlace([
+		Pseries(0, 1, 8),
+		Pseries(2,1,7)
+	], inf),
+	\dur, 0.25
+).play;
+)
+
+//Ptuple(list, repeats): get one value from each item in the array and return all of them as an array of values
+
+(
+p = Pbind(
+	\degree, Ptuple([
+		Pseries(7, -1, 8),
+		Pseq([9, 7, 7, 7, 4, 4, 2, 2], 1),
+		Pseq([4, 4, 4, 2, 2, 0, 0, -3], 1)
+	], 1),
+	\dur, 1
+).play;
+)
+
+
+//Arithmetic and Geometric Series
+//Pseries(start, step, length):
+
+//Pgeom(start, grow, length): successively multiplying the current value by grow
+
+//Use Pseries for a scale and Pgeom for an accelerando
+
+(
+p = Pbind(
+	\degree, Pseries(-7, 1, 15),
+	\dur, Pgeom(0.5, 0.89140193218427, 15)
+).play;
+)
+
+//Random numbers and probability distributions
+//Pwhite(lo, hi, length)
+//Pexprand(lo, hi, length)
+//Pbrown(lo, hi, step, length)
+
+(
+Pmeanrand(0.0, 1.0, inf).asStream.nextN(10000).histo(200,0.0, 1.0).plot;
+)
+
+
+//Pfunc(nextFunc, resetFunc)
+//Pfuncn(func, repeats)
+//Prout(routineFunc)
+
+//Pattern Guide 03: What is Pbind
+
+(
+e = (freq: 440, dur: 0.5);
+e.at(\freq);
+e[\freq];
+e.freq; //see IdentityDictionary
+)
+
+(
+p = Pbind(
+	\degree, Pseq(#[0, 0, 4, 4, 5, 5, 4], 1),
+	\dur, Pseq(#[0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1], 1)
+).asStream;
+)
+p.next(());
+
+//Pmono
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //Pattern Guide Cookbook 01: Basic Sequencing
 
 (
